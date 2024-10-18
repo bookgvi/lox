@@ -10,6 +10,7 @@ public class TokenCommentsForTest {
          */
 
         /* this comment for void /* // "/** void ends here: */
+        System.out.println("QQQ");
         return super.toString();
     }
 }

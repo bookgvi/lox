@@ -13,8 +13,7 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestComments {
 
@@ -27,9 +26,14 @@ public class TestComments {
             String text = buffer.lines().collect(Collectors.joining("\n"));
             Collection<Token> tokens = new TokenScanner(text, indexAtomic.incrementAndGet()).scanTokens();
             assertFalse(tokens.isEmpty());
-            assertFalse(tokens.stream().anyMatch(token -> token.getType() == TokenType.VOID));
-            assertFalse(tokens.stream().anyMatch(token -> token.getType() == TokenType.STAR));
-            assertFalse(tokens.stream().anyMatch(token -> token.getType() == TokenType.STRING));
+            assertEquals(1, tokens.stream().filter(token -> token.getType() == TokenType.END_OF_LINE_COMMENT).count());
+            assertEquals(2, tokens.stream().filter(token -> token.getType() == TokenType.TRADITIONAL_COMMENT).count());
+            assertEquals(1, tokens.stream().filter(token -> token.getType() == TokenType.STRING).count());
+            assertEquals("QQQ", tokens.stream()
+                    .filter(token -> token.getType() == TokenType.STRING)
+                    .map(Token::getLiteral).
+                    findFirst()
+                    .orElse(""));
             assertTrue(tokens.stream().anyMatch(token -> "toString".equals(token.getLexeme())));
         } catch (IOException e) {
             throw new RuntimeException(e);

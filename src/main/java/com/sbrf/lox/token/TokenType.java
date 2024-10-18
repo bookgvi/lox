@@ -22,6 +22,9 @@ public enum TokenType {
     // Literals.
     IDENTIFIER, STRING, NUMBER,
 
+    // Comments
+    END_OF_LINE_COMMENT, TRADITIONAL_COMMENT,
+
     // Keywords.
     AND, FALSE, FUN, NIL, OR,
     PRINT, TRUE,

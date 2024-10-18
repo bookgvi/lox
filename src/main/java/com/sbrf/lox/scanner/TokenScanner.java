@@ -15,16 +15,17 @@ public class TokenScanner {
 
     private static final Logger log = LoggerFactory.getLogger(TokenScanner.class);
 
-    private final String source;
     private final List<Token> tokens = new ArrayList<>();
     private int start = 0;
+    private int traditionalCommentStart = -1;
     private int current = 0;
     private int line = 1;
     private volatile boolean isMultilineComment;
+    private final char[] buff;
 
     TokenScanner(String source, int line) {
-        this.source = source;
         this.line = line;
+        buff = source.toCharArray();
     }
 
     public Collection<Token> scanTokens() {
@@ -59,6 +60,10 @@ public class TokenScanner {
             case '*':
                 if (match('/')) {
                     isMultilineComment = false;
+                    String lexeme = new String(buff, traditionalCommentStart, current - traditionalCommentStart);
+                    String literal = new String(buff, traditionalCommentStart + 2, current - 2 - (traditionalCommentStart + 2));
+                    traditionalCommentStart = -1;
+                    addToken(TRADITIONAL_COMMENT, lexeme, literal);
                 } else {
                     addToken(STAR);
                 }
@@ -81,8 +86,12 @@ public class TokenScanner {
                     while (peek() != '\n' && !isAtEnd() && !isMultilineComment) {
                         advance();
                     }
+                    String lexeme = new String(buff, start, current - start);
+                    String value = new String(buff, start + 2, current - (start + 2));
+                    addToken(END_OF_LINE_COMMENT, lexeme, value);
                 } else if (match('*') && !isAtEnd() && peekNext() != '*') {
                     isMultilineComment = true;
+                    traditionalCommentStart = traditionalCommentStart == -1 ? start : traditionalCommentStart;
                 } else {
                     addToken(SLASH);
                 }
@@ -119,7 +128,7 @@ public class TokenScanner {
         while (isAlphaNumeric(peek())) {
             advance();
         }
-        String text = source.substring(start, current);
+        String text = new String(buff, start, current - start);
         TokenType type = TokenType.getKeywords().getOrDefault(text, IDENTIFIER);
         addToken(type);
     }
@@ -139,12 +148,13 @@ public class TokenScanner {
                 advance();
             } while (isDigit(peek()));
         }
-        addToken(NUMBER, Double.parseDouble(source.substring(start, current)));
+        String value = new String(buff, start, current - start);
+        addToken(NUMBER, Double.parseDouble(value));
     }
 
     private char peekNext() {
-        if (current + 1 >= source.length()) return '\0';
-        return source.charAt(current + 1);
+        if (current + 1 >= buff.length) return '\0';
+        return buff[current + 1];
     }
 
     private void string() {
@@ -159,8 +169,10 @@ public class TokenScanner {
         // The closing ".
         advance();
         // Trim the surrounding quotes.
-        String value = source.substring(start + 1, current - 1);
-        addToken(STRING, value);
+        String lexeme = new String(buff, start, current - start);
+        String value = new String(buff, start + 1, current - 1 - (start + 1));
+
+        addToken(STRING, lexeme, value);
     }
 
 
@@ -168,14 +180,14 @@ public class TokenScanner {
         if (isAtEnd()) {
             return '\0';
         }
-        return source.charAt(current);
+        return buff[current];
     }
 
     private boolean match(char expected) {
         if (isAtEnd()) {
             return false;
         }
-        if (source.charAt(current) != expected) {
+        if (buff[current] != expected) {
             return false;
         }
         current++;
@@ -186,7 +198,7 @@ public class TokenScanner {
         if (isAtEnd()) {
             return '\u001a';
         }
-        return source.charAt(current++);
+        return buff[current++];
     }
 
     private void addToken(TokenType type) {
@@ -194,10 +206,14 @@ public class TokenScanner {
     }
 
     private void addToken(TokenType type, Object literal) {
+        String text = new String(buff, start, current - start);
+        addToken(type, text, null);
+    }
+
+    private void addToken(TokenType type, String text, Object literal) {
         if (isMultilineComment) {
             return;
         }
-        String text = source.substring(start, current);
         tokens.add(Token.builder()
                 .type(type)
                 .lexeme(text)
@@ -210,6 +226,6 @@ public class TokenScanner {
     }
 
     public boolean isAtEnd() {
-        return current >= source.length();
+        return current >= buff.length;
     }
 }
