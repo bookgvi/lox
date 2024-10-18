@@ -20,6 +20,7 @@ public class TokenScanner {
     private int start = 0;
     private int current = 0;
     private int line = 1;
+    private volatile boolean isMultilineComment;
 
     TokenScanner(String source, int line) {
         this.source = source;
@@ -55,7 +56,13 @@ public class TokenScanner {
             case '-': addToken(MINUS); break;
             case '+': addToken(PLUS); break;
             case ';': addToken(SEMICOLON); break;
-            case '*': addToken(STAR); break;
+            case '*':
+                if (match('/')) {
+                    isMultilineComment = false;
+                } else {
+                    addToken(STAR);
+                }
+                break;
             case '@': addToken(AMPERSAND); break;
             case '!':
                 addToken(match('=') ? BANG_EQUAL : BANG);
@@ -71,9 +78,11 @@ public class TokenScanner {
                 break;
             case '/':
                 if (match('/')) {
-                    while (peek() != '\n' && !isAtEnd()) {
+                    while (peek() != '\n' && !isAtEnd() && !isMultilineComment) {
                         advance();
                     }
+                } else if (match('*') && !isAtEnd() && peekNext() != '*') {
+                    isMultilineComment = true;
                 } else {
                     addToken(SLASH);
                 }
@@ -139,7 +148,7 @@ public class TokenScanner {
     }
 
     private void string() {
-        while (peek() != '"' && !isAtEnd()) {
+        while (peek() != '"' && !isAtEnd() && !isMultilineComment) {
             if (peek() == '\n') line++;
             advance();
         }
@@ -185,6 +194,9 @@ public class TokenScanner {
     }
 
     private void addToken(TokenType type, Object literal) {
+        if (isMultilineComment) {
+            return;
+        }
         String text = source.substring(start, current);
         tokens.add(Token.builder()
                 .type(type)

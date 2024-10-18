@@ -1,12 +1,12 @@
 package com.sbrf.lox.token;
 
 public class Token {
-    final TokenType type;
-    final String lexeme;
-    final Object literal;
-    final int line;
-    final int start;
-    final int end;
+    private final TokenType type;
+    private final String lexeme;
+    private final Object literal;
+    private final int line;
+    private final int start;
+    private final int end;
 
     private Token(
             TokenType type,
@@ -26,6 +26,30 @@ public class Token {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public int getEnd() {
+        return end;
+    }
+
+    public String getLexeme() {
+        return lexeme;
+    }
+
+    public int getLine() {
+        return line;
+    }
+
+    public Object getLiteral() {
+        return literal;
+    }
+
+    public int getStart() {
+        return start;
+    }
+
+    public TokenType getType() {
+        return type;
     }
 
     @Override
